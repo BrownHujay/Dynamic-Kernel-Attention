@@ -26,11 +26,11 @@ from .dka_block import DKABlock
 # Model configurations
 # ---------------------------------------------------------------------------
 
-# Image kernel size assignments per config
+# Image kernel size assignments per config (2D side lengths, e.g. 3 = 3x3 window)
 IMAGE_KERNEL_SIZES = {
-    "tiny":  [3, 5, 7, 11],                                    # H=4
-    "small": [3, 3, 5, 5, 7, 7, 11, 11],                       # H=8
-    "base":  [3, 3, 3, 5, 5, 5, 7, 7, 7, 11, 11, 11],         # H=12
+    "tiny":  [3, 3, 5, 5],                                     # H=4
+    "small": [3, 3, 3, 3, 5, 5, 5, 5],                         # H=8
+    "base":  [3, 3, 3, 3, 5, 5, 5, 5, 7, 7, 7, 7],            # H=12
 }
 
 # Text kernel size assignments per config
@@ -143,6 +143,9 @@ class DKAImageModel(nn.Module):
         self.patch_embed = PatchEmbedding(img_size, patch_size, d_model)
         num_patches = self.patch_embed.num_patches
 
+        # 2D grid dimensions for 2D window extraction
+        self.grid_size = (img_size // patch_size, img_size // patch_size)
+
         # Learned positional embeddings P in R^(n x d)
         self.pos_embed = nn.Parameter(torch.empty(1, num_patches, d_model))
 
@@ -152,7 +155,7 @@ class DKAImageModel(nn.Module):
             for i in range(num_layers)
         ]
 
-        # Stacked DKA Transformer Blocks
+        # Stacked DKA Transformer Blocks with 2D windowing
         self.blocks = nn.ModuleList([
             DKABlock(
                 d_model=d_model,
@@ -162,6 +165,7 @@ class DKAImageModel(nn.Module):
                 dropout=dropout,
                 drop_path=drop_rates[i],
                 causal=False,
+                grid_size=self.grid_size,
             )
             for i in range(num_layers)
         ])

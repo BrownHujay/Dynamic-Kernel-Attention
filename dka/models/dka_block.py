@@ -95,11 +95,14 @@ class DKABlock(nn.Module):
         d_model: Model embedding dimension.
         num_heads: Number of attention heads (H).
         kernel_sizes: List of kernel sizes, one per head. Length must equal num_heads.
+            For images with grid_size, these are 2D side lengths (e.g., 3 = 3x3).
+            For text, these are 1D widths.
         rank: Rank of factored kernel decomposition (R).
         dropout: Dropout probability after DKA output and FFN output.
         drop_path: Stochastic depth drop probability for this block.
         ffn_expansion: FFN hidden dimension multiplier (default 4).
         causal: If True, apply causal masking in DKA (for language modeling).
+        grid_size: (H_grid, W_grid) for 2D window extraction. None for text.
     """
 
     def __init__(
@@ -112,6 +115,7 @@ class DKABlock(nn.Module):
         drop_path: float = 0.0,
         ffn_expansion: int = 4,
         causal: bool = False,
+        grid_size: tuple[int, int] | None = None,
     ):
         super().__init__()
 
@@ -126,6 +130,7 @@ class DKABlock(nn.Module):
             kernel_sizes=kernel_sizes,
             rank=rank,
             causal=causal,
+            grid_size=grid_size,
         )
 
         # Dropout after DKA output (before residual addition)

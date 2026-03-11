@@ -79,8 +79,11 @@ class FactoredKernelGenerator(nn.Module):
         nn.init.normal_(self.channel_fc2.weight, mean=0.0, std=0.001)
         nn.init.zeros_(self.channel_fc2.bias)
 
-        # K_base: Kaiming uniform, same as a standard conv layer
-        nn.init.kaiming_uniform_(self.K_base, a=math.sqrt(5))
+        # K_base: Kaiming uniform, same as a standard depthwise conv layer.
+        # fan_in = k_h (number of spatial positions summed over per channel).
+        # bound = 1/sqrt(fan_in) for kaiming_uniform with a=sqrt(5).
+        bound = 1.0 / math.sqrt(self.k_h)
+        nn.init.uniform_(self.K_base, -bound, bound)
 
         # alpha: constant 0.01 (already set in Parameter init, but be explicit)
         nn.init.constant_(self.alpha, 0.01)

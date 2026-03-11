@@ -34,3 +34,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+dka/data/cifar-10-python.tar.gz
+dka/data/cifar-10-batches-py/

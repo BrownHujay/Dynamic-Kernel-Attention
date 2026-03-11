@@ -444,6 +444,26 @@ def build_optimizer(model, cfg):
     return optimizer
 
 
+# --- Scale LR for batch size ---
+# Reference batch sizes from build guide (section 5.4).
+# If actual batch size differs, scale LR by sqrt(actual / ref) for AdamW.
+REFERENCE_BATCH_SIZES = {
+    "cifar10": 256,
+    "tinyimagenet": 128,
+    "agnews": 64,
+    "wikitext2": 64,
+}
+ref_bs = REFERENCE_BATCH_SIZES.get(dataset_name, batch_size)
+if batch_size != ref_bs:
+    lr_scale = math.sqrt(batch_size / ref_bs)
+    cfg["optimizer"]["main_lr"] *= lr_scale
+    cfg["optimizer"]["kernel_gen_lr"] *= lr_scale
+    cfg["optimizer"]["alpha_lr"] *= lr_scale
+    print(f"LR scaled by sqrt({batch_size}/{ref_bs}) = {lr_scale:.3f} for batch_size={batch_size}")
+    print(f"  main_lr:       {cfg['optimizer']['main_lr']:.2e}")
+    print(f"  kernel_gen_lr: {cfg['optimizer']['kernel_gen_lr']:.2e}")
+    print(f"  alpha_lr:      {cfg['optimizer']['alpha_lr']:.2e}")
+
 optimizer = build_optimizer(model, cfg)
 
 

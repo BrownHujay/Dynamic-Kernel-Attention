@@ -16,7 +16,7 @@ model:
   num_heads: 8
   num_layers: 8
   rank: 4
-  kernel_sizes: [3, 3, 5, 5, 7, 7, 11, 11]
+  kernel_sizes: [3, 3, 3, 3, 5, 5, 5, 5]  # 2D side lengths: 3x3=9 and 5x5=25 neighbors
 
 # --- Data ---
 data:
