@@ -11,9 +11,9 @@ build/
 venv/
 env/
 
-# Data & checkpoints
-data/
-checkpoints/
+# Data & checkpoints (top-level only, not dka/data/)
+/data/
+/checkpoints/
 *.pt
 *.pth
 
