@@ -1,0 +1,104 @@
+# Tiny ImageNet Training Configuration
+# Model: DKA-Small (d=256, H=8, L=8, R=4)
+# Reference: DKA Build Guide, Sections 4.1, 5.1-5.5, 7.2
+
+experiment:
+  name: "dka-small-tinyimagenet"
+  seed: 42
+  precision: "fp16"  # Use AMP (torch.cuda.amp) with fp16
+
+# --- Model ---
+model:
+  name: "DKA-Small"
+  config_name: "small"
+  type: "image"
+  d_model: 256
+  num_heads: 8
+  num_layers: 8
+  rank: 4
+  kernel_sizes: [3, 3, 5, 5, 7, 7, 11, 11]
+
+# --- Data ---
+data:
+  dataset: "tinyimagenet"
+  data_dir: "./data"
+  image_size: 64
+  patch_size: 4
+  num_classes: 200
+  in_channels: 3
+  # Derived: seq_len = (64/4)^2 = 256
+
+# --- Training ---
+training:
+  batch_size: 128
+  epochs: 300
+  num_workers: 4
+  pin_memory: true
+
+# --- Optimizer (AdamW with parameter groups) ---
+optimizer:
+  name: "adamw"
+  main_lr: 3.0e-4
+  kernel_gen_lr: 3.0e-5
+  alpha_lr: 1.0e-3
+  weight_decay: 0.05
+
+# --- Scheduler (warmup + cosine annealing) ---
+scheduler:
+  warmup_epochs: 10
+  min_lr: 1.0e-5
+
+# --- Regularization ---
+regularization:
+  dropout: 0.1
+  drop_path: 0.1
+  label_smoothing: 0.1
+
+# --- Augmentation (image-specific) ---
+augmentation:
+  randaugment:
+    num_ops: 2
+    magnitude: 9
+  random_hflip: true
+  # Tiny ImageNet uses random_resized_crop instead of random_crop with padding
+  random_resized_crop:
+    size: 64
+    scale: [0.08, 1.0]
+    ratio: [0.75, 1.333]
+  mixup_alpha: 0.8
+  cutmix_alpha: 1.0
+  mixup_prob: 0.5
+
+# --- EMA ---
+ema:
+  enabled: true
+  decay: 0.9999
+
+# --- Diversity Loss ---
+diversity_loss:
+  lambda_div: 0.1
+  tau: 0.5
+  num_pairs: 64
+
+# --- Gradient Clipping ---
+grad_clip:
+  global_max_norm: 1.0
+  kernel_gen_max_norm: 0.5
+
+# --- Logging ---
+logging:
+  use_wandb: true
+  wandb_project: "dka-tinyimagenet"
+  log_every_n_steps: 50
+
+# --- Checkpointing ---
+checkpointing:
+  save_dir: "./checkpoints"
+  save_every_n_epochs: 50
+  save_best: true
+  best_metric: "val_accuracy"
+
+# --- Baselines ---
+baselines:
+  enabled: false
+  model_name: "vit"

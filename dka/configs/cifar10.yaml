@@ -1,0 +1,112 @@
+# CIFAR-10 Training Configuration
+# Model: DKA-Small (d=256, H=8, L=8, R=4)
+# Reference: DKA Build Guide, Sections 4.1, 5.1-5.5
+
+experiment:
+  name: "dka-small-cifar10"
+  seed: 42
+  precision: "fp16"  # Use AMP (torch.cuda.amp) with fp16
+
+# --- Model ---
+# DKA-Tiny for local dev (M3). Switch to "small" on cloud.
+model:
+  name: "DKA-Tiny"
+  config_name: "tiny"
+  type: "image"
+  d_model: 128
+  num_heads: 4
+  num_layers: 6
+  rank: 2
+  kernel_sizes: [3, 5, 7, 11]
+
+# --- Data ---
+data:
+  dataset: "cifar10"
+  data_dir: "./data"
+  image_size: 32
+  patch_size: 4
+  num_classes: 10
+  in_channels: 3
+  # Derived: seq_len = (32/4)^2 = 64
+
+# --- Training ---
+training:
+  batch_size: 128       # 256 for CUDA, 128 for MPS/M3 with Tiny
+  epochs: 50            # 300 for full run on cloud, 50 for local dev
+  num_workers: 2
+  pin_memory: false
+
+# --- Optimizer (AdamW with parameter groups) ---
+optimizer:
+  name: "adamw"
+  # Main parameters: embeddings, FFN, projections, K_base, LayerNorm
+  main_lr: 3.0e-4
+  # Kernel generator parameters: W_1s, W_2s, W_1c, W_2c and their biases
+  kernel_gen_lr: 3.0e-5
+  # Alpha scalars: learned dynamic-vs-static balance
+  alpha_lr: 1.0e-3
+  # Weight decay (0.0 for biases, LayerNorm, and alpha)
+  weight_decay: 0.05
+
+# --- Scheduler (warmup + cosine annealing) ---
+scheduler:
+  warmup_epochs: 5
+  min_lr: 1.0e-5
+  # Cosine annealing from main_lr to min_lr after warmup
+
+# --- Regularization ---
+regularization:
+  dropout: 0.1
+  drop_path: 0.1       # Max stochastic depth rate (linearly increasing per layer)
+  label_smoothing: 0.05  # Reduced for Tiny. 0.1 for Small/Base.
+
+# --- Augmentation (image-specific) ---
+augmentation:
+  randaugment:
+    num_ops: 2
+    magnitude: 9
+  random_hflip: true
+  random_crop:
+    size: 32
+    padding: 4
+  mixup_alpha: 0.0     # Disabled for Tiny. Set to 0.8 for Small/Base on cloud.
+  cutmix_alpha: 0.0    # Disabled for Tiny. Set to 1.0 for Small/Base on cloud.
+  mixup_prob: 0.5
+
+# --- EMA (Exponential Moving Average of model weights) ---
+ema:
+  enabled: true
+  decay: 0.9999
+
+# --- Diversity Loss ---
+diversity_loss:
+  lambda_div: 0.1     # Weight for kernel diversity loss
+  tau: 0.5            # Cosine similarity threshold
+  num_pairs: 64       # Number of random token pairs to sample per head
+
+# --- Gradient Clipping ---
+grad_clip:
+  global_max_norm: 1.0
+  kernel_gen_max_norm: 0.5
+
+# --- Logging ---
+logging:
+  use_wandb: true
+  wandb_project: "dka-cifar10"
+  log_every_n_steps: 50
+  # Metrics to log: loss, accuracy, alpha_h values, kernel diversity,
+  # kernel Frobenius norms, gradient norms
+
+# --- Checkpointing ---
+checkpointing:
+  save_dir: "./checkpoints"
+  save_every_n_epochs: 50
+  save_best: true
+  best_metric: "val_accuracy"
+
+# --- Baselines ---
+baselines:
+  # Set to true to train a baseline model instead of DKA
+  enabled: false
+  # Options: "vit", "resnet18", "convnext", "deit"
+  model_name: "vit"

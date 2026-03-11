@@ -1,0 +1,96 @@
+# WikiText-2 Language Modeling Configuration
+# Model: DKA-Small text mode with causal masking (d=256, H=8, L=8, R=4)
+# Reference: DKA Build Guide, Sections 4.2, 5.1-5.5
+
+experiment:
+  name: "dka-small-wikitext2"
+  seed: 42
+  precision: "fp16"
+
+# --- Model ---
+model:
+  name: "DKA-Small"
+  config_name: "small"
+  type: "text"
+  d_model: 256
+  num_heads: 8
+  num_layers: 8
+  rank: 4
+  # Text kernel sizes: larger outer kernels for linguistic dependencies
+  kernel_sizes: [3, 3, 7, 7, 11, 11, 21, 21]
+  causal: true  # Causal masking required for autoregressive language modeling
+
+# --- Data ---
+data:
+  dataset: "wikitext2"
+  data_dir: "./data"
+  vocab_size: 30000
+  seq_len: 256       # Sequence length for language modeling
+  task: "language_modeling"
+
+# --- Training ---
+training:
+  batch_size: 64
+  epochs: 50
+  num_workers: 4
+  pin_memory: true
+
+# --- Optimizer (AdamW with parameter groups) ---
+optimizer:
+  name: "adamw"
+  main_lr: 3.0e-4
+  kernel_gen_lr: 3.0e-5
+  alpha_lr: 1.0e-3
+  weight_decay: 0.05
+
+# --- Scheduler (warmup + cosine annealing) ---
+scheduler:
+  warmup_epochs: 10
+  min_lr: 1.0e-5
+
+# --- Regularization ---
+regularization:
+  dropout: 0.1
+  drop_path: 0.1
+  label_smoothing: 0.0   # No label smoothing for LM
+
+# --- Augmentation ---
+# No augmentation for language modeling
+augmentation:
+  mixup_alpha: 0.0
+  cutmix_alpha: 0.0
+
+# --- EMA ---
+# No EMA for text tasks
+ema:
+  enabled: false
+
+# --- Diversity Loss ---
+diversity_loss:
+  lambda_div: 0.1
+  tau: 0.5
+  num_pairs: 64
+
+# --- Gradient Clipping ---
+grad_clip:
+  global_max_norm: 1.0
+  kernel_gen_max_norm: 0.5
+
+# --- Logging ---
+logging:
+  use_wandb: true
+  wandb_project: "dka-wikitext2"
+  log_every_n_steps: 50
+  # Primary metric: perplexity (exp of cross-entropy loss)
+
+# --- Checkpointing ---
+checkpointing:
+  save_dir: "./checkpoints"
+  save_every_n_epochs: 10
+  save_best: true
+  best_metric: "val_perplexity"  # Lower is better
+
+# --- Baselines ---
+baselines:
+  enabled: false
+  model_name: "vit"  # Uses ViTForTextClassification equivalent for LM
